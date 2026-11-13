@@ -1,0 +1,27 @@
+# Build
+bin/
+obj/
+publish/
+out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Data / logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+TestResults/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+appsettings.Production.json
+.env

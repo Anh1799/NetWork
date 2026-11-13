@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # BẮT BUỘC ở Production: API này cho phép gọi kết nối mạng ra ngoài, phải có API key
+      Security__ApiKey: "change-me-to-a-long-random-string"
+      Swagger__Enabled: "true"

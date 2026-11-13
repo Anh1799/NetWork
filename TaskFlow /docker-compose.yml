@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Data Source=/data/taskflow.db"
+      # BẮT BUỘC đổi khóa này (>= 32 ký tự) trước khi deploy thật
+      Jwt__Key: "docker-demo-secret-key-please-change-0123456789"
+      Swagger__Enabled: "true"
+    volumes:
+      - taskflow-data:/data
+
+volumes:
+  taskflow-data:

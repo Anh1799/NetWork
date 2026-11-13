@@ -1,0 +1,38 @@
+### Dùng với VS Code (REST Client) hoặc Rider/Visual Studio
+@host = http://localhost:5080
+
+### Đăng ký
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "username": "alice", "email": "alice@example.com", "password": "Secret123" }
+
+### Đăng nhập (copy token vào biến bên dưới)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "alice", "password": "Secret123" }
+
+###
+@token = PASTE_TOKEN_HERE
+
+### Tạo task
+POST {{host}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "Học ASP.NET Core", "description": "Đọc docs", "priority": "High" }
+
+### Danh sách task (lọc + phân trang)
+GET {{host}}/api/tasks?status=Todo&search=asp&page=1&pageSize=10&sortBy=title
+Authorization: Bearer {{token}}
+
+### Ngày lễ Việt Nam 2026 (gọi API bên ngoài qua HttpClient)
+GET {{host}}/api/holidays/2026/VN
+Authorization: Bearer {{token}}
+
+### Thông tin kết nối mạng
+GET {{host}}/api/network/info
+
+### Health check
+GET {{host}}/health

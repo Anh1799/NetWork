@@ -1,0 +1,39 @@
+### VS Code (REST Client) / Rider / Visual Studio
+@host = http://localhost:5090
+# Nếu bật Security:ApiKey, thêm dòng:  X-API-Key: <key>
+
+### DNS
+GET {{host}}/api/diagnostics/dns/example.com
+
+### Ping (ICMP)
+GET {{host}}/api/diagnostics/ping/example.com?count=4
+
+### Kiểm tra cổng TCP
+GET {{host}}/api/diagnostics/tcp?host=example.com&port=443
+
+### Kiểm tra HTTP (không tự theo redirect)
+GET {{host}}/api/diagnostics/http?url=https://example.com
+
+### Thông tin chứng chỉ TLS
+GET {{host}}/api/diagnostics/tls?host=example.com&port=443
+
+### Bị chặn (SSRF guard): địa chỉ nội bộ -> 403
+GET {{host}}/api/diagnostics/tcp?host=127.0.0.1&port=80
+
+### Gọi API ngoài qua typed HttpClient
+GET {{host}}/api/external/holidays/2026/VN
+
+###
+GET {{host}}/api/external/public-ip
+
+### Server-Sent Events
+GET {{host}}/api/stream/time?count=5&intervalMs=500
+
+### Thông tin request / server
+GET {{host}}/api/info/request
+
+###
+GET {{host}}/api/info/server
+
+### Health
+GET {{host}}/health

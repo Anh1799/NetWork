@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetLab</title>
+<style>
+  :root { --bg:#fff; --fg:#1b1f24; --muted:#6a737d; --card:#f6f8fa; --line:#d0d7de; --accent:#0969da; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --card:#161b22; --line:#30363d; --accent:#4493f8; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { margin: 0; } h2 { margin: 0 0 8px; font-size: 17px; }
+  p.sub { margin: 0; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  input { padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); }
+  input.grow { flex:1; min-width:160px; }
+  button { padding:6px 12px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+  pre, .log { margin:0; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:6px;
+              min-height:60px; max-height:260px; overflow:auto; white-space:pre-wrap; word-break:break-word; font:13px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>NetLab</h1>
+    <p class="sub">Công cụ thử nghiệm networking. API đầy đủ tại <a href="/swagger">/swagger</a> (khi được bật).</p>
+  </div>
+
+  <section>
+    <h2>Chẩn đoán mạng</h2>
+    <div class="row">
+      <input id="key" class="grow" placeholder="API key (nếu server yêu cầu)" type="password">
+    </div>
+    <div class="row">
+      <input id="host" class="grow" value="example.com" placeholder="host">
+      <input id="port" value="443" size="5" placeholder="port">
+      <button id="dns">DNS</button><button id="ping">Ping</button>
+      <button id="tcp">TCP</button><button id="tls">TLS</button>
+    </div>
+    <div class="row">
+      <input id="url" class="grow" value="https://example.com" placeholder="url">
+      <button id="http">HTTP</button>
+      <button id="ip">IP public của server</button>
+    </div>
+    <pre id="out">Kết quả sẽ hiện ở đây…</pre>
+  </section>
+
+  <section>
+    <h2>WebSocket chat</h2>
+    <div class="row">
+      <input id="nick" value="guest" size="12" placeholder="tên">
+      <button id="connect">Kết nối</button>
+      <button id="disconnect">Ngắt</button>
+    </div>
+    <div id="chat" class="log"></div>
+    <div class="row" style="margin-top:8px">
+      <input id="msg" class="grow" placeholder="Nhập tin nhắn rồi Enter">
+      <button id="send">Gửi</button>
+    </div>
+    <p class="sub">Mở trang này ở hai tab để thấy tin nhắn được broadcast.</p>
+  </section>
+
+  <section>
+    <h2>Server-Sent Events</h2>
+    <div class="row"><button id="sse">Nhận 5 sự kiện</button></div>
+    <pre id="sseout"></pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const headers = () => { const k = $('key').value.trim(); return k ? { 'X-API-Key': k } : {}; };
+const enc = encodeURIComponent;
+
+async function call(path) {
+  $('out').textContent = 'Đang gọi…';
+  try {
+    const r = await fetch(path, { headers: headers() });
+    const t = await r.text();
+    let body = t;
+    try { body = JSON.stringify(JSON.parse(t), null, 2); } catch {}
+    $('out').textContent = `HTTP ${r.status}\n` + body;
+  } catch (e) { $('out').textContent = String(e); }
+}
+
+$('dns').onclick  = () => call('/api/diagnostics/dns/' + enc($('host').value));
+$('ping').onclick = () => call('/api/diagnostics/ping/' + enc($('host').value));
+$('tcp').onclick  = () => call(`/api/diagnostics/tcp?host=${enc($('host').value)}&port=${enc($('port').value)}`);
+$('tls').onclick  = () => call(`/api/diagnostics/tls?host=${enc($('host').value)}&port=${enc($('port').value)}`);
+$('http').onclick = () => call('/api/diagnostics/http?url=' + enc($('url').value));
+$('ip').onclick   = () => call('/api/external/public-ip');
+
+// ----- WebSocket chat (dùng textContent để tránh XSS) -----
+let ws;
+function log(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  $('chat').appendChild(d);
+  $('chat').scrollTop = $('chat').scrollHeight;
+}
+$('connect').onclick = () => {
+  if (ws && ws.readyState <= 1) return;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/chat?name=${enc($('nick').value || 'guest')}`);
+  ws.onmessage = e => log(e.data);
+  ws.onclose = () => log('* đã ngắt kết nối');
+  ws.onerror = () => log('* lỗi kết nối');
+};
+$('disconnect').onclick = () => ws && ws.close();
+const send = () => {
+  const v = $('msg').value.trim();
+  if (ws && ws.readyState === 1 && v) { ws.send(v); $('msg').value = ''; }
+};
+$('send').onclick = send;
+$('msg').onkeydown = e => { if (e.key === 'Enter') send(); };
+
+// ----- SSE: dùng fetch streaming để có thể gửi header X-API-Key -----
+$('sse').onclick = async () => {
+  const box = $('sseout');
+  box.textContent = '';
+  try {
+    const r = await fetch('/api/stream/time?count=5&intervalMs=1000', { headers: headers() });
+    if (!r.ok) { box.textContent = `HTTP ${r.status}`; return; }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      box.textContent += dec.decode(value, { stream: true });
+    }
+  } catch (e) { box.textContent = String(e); }
+};
+</script>
+</body>
+</html>
